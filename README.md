@@ -1,15 +1,7 @@
-# Basic Sample Hardhat Project
+# BattleCats NFT Game Smart Contract
 
-This project demonstrates a basic Hardhat use case. It comes with a sample contract, a test for that contract, a sample script that deploys that contract, and an example of a task implementation, which simply lists the available accounts.
+Smart contracts for the BattleCats NFT game where you mint a type of cat and attack a boss as a community, web3 practice 
 
-Try running some of the following tasks:
+each attack has a chance to land a critical hit depending on the BattleCat you chose , also , the defense stat will dictate your chance to blocking the Boss' counterattack after you land a hit
 
-```shell
-npx hardhat accounts
-npx hardhat compile
-npx hardhat clean
-npx hardhat test
-npx hardhat node
-node scripts/sample-script.js
-npx hardhat help
-```
+you can try it out live [HERE](https://nft-game-starter-project.carlos-di.repl.co/)
