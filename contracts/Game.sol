@@ -31,7 +31,10 @@ contract MyEpicGame is ERC721 {
     Counters.Counter private _tokenIds;
 
     CharacterAttributes[] defaultCharacters;
+    bytes32 internal keyHash;
+    uint256 internal fee;
 
+    uint256 public randomResult;
     // We create a mapping from the nft's tokenId => that NFTs attributes.
     mapping(uint256 => CharacterAttributes) public nftHolderAttributes;
 
@@ -55,7 +58,12 @@ contract MyEpicGame is ERC721 {
         uint256 tokenId,
         uint256 characterIndex
     );
-    event AttackComplete(uint256 newBossHp, uint256 newPlayerHp);
+    event AttackComplete(
+        uint256 newBossHp,
+        uint256 newPlayerHp,
+        bool criticalHit,
+        bool blocked
+    );
 
     constructor(
         string[] memory characterNames,
@@ -75,6 +83,10 @@ contract MyEpicGame is ERC721 {
         // BattleCats and TXPLSMSIS. Remember, an NFT is just a token!
         ERC721("BattleCats", "TXPLSMSIS")
     {
+        // chainlink stuff
+        keyHash = 0x2ed0feb3e7fd2022120aa84fab1945545a9f2ffc9076fd6156fa96eaff4c1311;
+        fee = 0.1 * 10**18; // 0.1 LINK (Varies by network)
+
         // Initialize the boss. Save it to our global "bigBoss" state variable.
         bigBoss = BigBoss({
             name: bossName,
@@ -241,29 +253,68 @@ contract MyEpicGame is ERC721 {
         // Make sure the boss has more than 0 HP.
         require(bigBoss.hp > 0, "Error: seems cruel to damage a corpse :O");
         // add miss chance ,  critical chance and critical damage calculations here before attacking, this would change the IF!!!!
+        console.log("random number : %s ,", randomResult);
+        /*
+         * Generate a Psuedo random number between 0 and 100
+         */
+        uint256 blockChance = player.defense / 10;
+        uint256 randomNumber = (block.difficulty +
+            block.timestamp +
+            randomResult) % 100;
+        uint256 randomNumberForBlock = (block.difficulty +
+            block.timestamp +
+            randomNumber) % 100;
+        console.log(
+            "Random # generated: %s , for block : %s",
+            randomNumber,
+            randomNumberForBlock
+        );
+
+        /*
+         * Set the generated, random number as the seed for the next wave
+         */
+        randomResult = randomNumber;
+        bool criticalHit = false;
+        bool blocked = false;
         // Allow player to attack boss.
         if (bigBoss.hp < player.attackDamage) {
             bigBoss.hp = 0;
         } else {
-            bigBoss.hp = bigBoss.hp - player.attackDamage;
+            if (randomResult < player.criticalChance) {
+                bigBoss.hp =
+                    bigBoss.hp -
+                    (player.attackDamage * player.criticalMultiplier);
+                criticalHit = true;
+            } else {
+                bigBoss.hp = bigBoss.hp - player.attackDamage;
+            }
         }
         // add block calculations based on players defense
         // Allow boss to attack player.
+        blocked = randomNumberForBlock < blockChance;
         if (bigBoss.hp > 0) {
-            if (player.hp < bigBoss.attackDamage) {
-                player.hp = 0;
-            } else {
-                player.hp = player.hp - bigBoss.attackDamage;
+            if (!blocked) {
+                if (player.hp < bigBoss.attackDamage) {
+                    player.hp = 0;
+                } else {
+                    player.hp = player.hp - bigBoss.attackDamage;
+                }
             }
             // Console for ease.
             console.log(
-                "Boss attacked player. player hp went down to: %s\n",
+                "finished turn boss hp %s ,  remaining player hp : %s ",
+                bigBoss.hp,
                 player.hp
+            );
+            console.log(
+                "\n player hit critical? %s , player blocked boss? %s",
+                criticalHit,
+                blocked
             );
         } else {
             console.log("Player obliterated %s :O", bigBoss.name);
         }
-        emit AttackComplete(bigBoss.hp, player.hp);
+        emit AttackComplete(bigBoss.hp, player.hp, criticalHit, blocked);
     }
 
     function checkIfUserHasNFT()
